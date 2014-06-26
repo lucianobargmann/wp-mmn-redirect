@@ -33,6 +33,7 @@
 namespace Sawabona;
 
 define("SWBA_L10N_DOMAIN", "swba-mmn-redirect");
+define("SWBA_REDIRECT_OPTIONS_SLUG", "swba-mmn-redirect-options");
 
 class SponsorRedirect
 {
@@ -72,12 +73,12 @@ class SponsorRedirect
     function pluginMenu()
     {
         add_options_page('Sawabona SGMMN Redirect Options', 'Sawabona SGMMN',
-            'manage_options', 'swba-mmn-redirect-options', array($this, 'optionsPage'));
+            'manage_options', SWBA_REDIRECT_OPTIONS_SLUG, array($this, 'optionsPage'));
     }
 
     // Add settings link on plugin page
     function pluginSettingsLink($links) {
-        $settings_link = '<a href="options-general.php?page=your_plugin.php">Settings</a>';
+        $settings_link = '<a href="options-general.php?page=' . SWBA_REDIRECT_OPTIONS_SLUG. '.php">Settings</a>';
         array_unshift($links, $settings_link);
         return $links;
     }
