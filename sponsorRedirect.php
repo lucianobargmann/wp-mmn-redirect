@@ -43,8 +43,13 @@ class SponsorRedirect
 
         register_activation_hook(__FILE__, array($this, 'activatePlugin'));
         add_filter('template_redirect', array($this, 'redirect'));
-        add_action('admin_menu', array($this, 'pluginMenu'));
-        add_filter("plugin_action_links_$plugin", array($this, 'pluginSettingsLink') );
+
+        if (is_admin()) {
+            add_action('admin_menu', array($this, 'pluginMenu'));
+            add_action('admin_init', array($this, 'registerSettings'));
+            add_filter("plugin_action_links_$plugin", array($this, 'pluginSettingsLink'));
+        }
+
         register_deactivation_hook(__FILE__, array($this, 'deactivatePlugin'));
     }
 
@@ -76,25 +81,58 @@ class SponsorRedirect
             'manage_options', SWBA_REDIRECT_OPTIONS_SLUG, array($this, 'optionsPage'));
     }
 
+    /**
+     * Whitelist which options can be saved in this page
+     */
+    function registerSettings()
+    {
+        register_setting( 'swba_options', 'swba_options', array($this, 'validateOptions') );
+
+        add_settings_section('plugin_main', __('Main Settings', SWBA_L10N_DOMAIN),
+            array($this, 'sectionText'), 'swba_options');
+
+        add_settings_field('swba_redirect_options', __('BackOffice URL', SWBA_L10N_DOMAIN),
+            array($this, 'sectionText'), 'swba_options', 'plugin_main');
+    }
+
     // Add settings link on plugin page
-    function pluginSettingsLink($links) {
-        $settings_link = '<a href="options-general.php?page=' . SWBA_REDIRECT_OPTIONS_SLUG. '.php">Settings</a>';
+    function pluginSettingsLink($links)
+    {
+        $settings_link = '<a href="options-general.php?page=' . SWBA_REDIRECT_OPTIONS_SLUG . '.php">Settings</a>';
         array_unshift($links, $settings_link);
         return $links;
     }
 
+    /**
+     * Text for the Options Section
+     */
+    function sectionText()
+    {
+        echo '<p>Configure Sponsor Redirection here.</p>';
+    }
 
     /**
      * Display the Options Page for plugin configuration
      */
     function optionsPage()
     {
-        if ( !current_user_can( 'manage_options' ) )  {
-            wp_die( __( 'You do not have sufficient permissions to access this page.', SWBA_L10N_DOMAIN ) );
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', SWBA_L10N_DOMAIN));
         }
-        echo '<div class="wrap">';
-        echo '<p>In Russia, the Options has Sawabona.</p>';
-        echo '</div>';
+
+        ?>
+        <div class="wrap">
+        <h2>Sawabona SGMMN Redirect Options</h2>
+        <form method="post" action="options.php">
+
+        <?php
+            settings_fields( SWBA_OPTIONS_GROUP );
+            do_settings_sections( 'swba_options' );
+            submit_button(__('Save Options', SWBA_L10N_DOMAIN));
+        ?>
+        </form>
+        </div>
+<?php
     }
 
     /*
