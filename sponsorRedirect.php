@@ -32,11 +32,18 @@
 
 namespace Sawabona;
 
+define("SWBA_L10N_DOMAIN", "swba-mmn-redirect");
+
 class SponsorRedirect
 {
     public function __construct()
     {
+        $plugin = plugin_basename(__FILE__);
+
         register_activation_hook(__FILE__, array($this, 'activatePlugin'));
+        add_filter('template_redirect', array($this, 'redirect'));
+        add_action('admin_menu', array($this, 'pluginMenu'));
+        add_filter("plugin_action_links_$plugin", array($this, 'pluginSettingsLink') );
         register_deactivation_hook(__FILE__, array($this, 'deactivatePlugin'));
     }
 
@@ -47,8 +54,7 @@ class SponsorRedirect
     function activatePlugin()
     {
         $this->setupPermalink();
-        // TODO: $this->setupRedirect();
-        // TODO: $this->disableMenus();
+        $this->disableMenus();
     }
 
     /**
@@ -57,7 +63,37 @@ class SponsorRedirect
     function deactivatePlugin()
     {
         $this->undoPermalink();
-        // TODO: $this->enableMenus();
+        $this->enableMenus();
+    }
+
+    /**
+     * Setup the administration menu to access Options Page for plugin configuration
+     */
+    function pluginMenu()
+    {
+        add_options_page('Sawabona SGMMN Redirect Options', 'Sawabona SGMMN',
+            'manage_options', 'swba-mmn-redirect-options', array($this, 'optionsPage'));
+    }
+
+    // Add settings link on plugin page
+    function pluginSettingsLink($links) {
+        $settings_link = '<a href="options-general.php?page=your_plugin.php">Settings</a>';
+        array_unshift($links, $settings_link);
+        return $links;
+    }
+
+
+    /**
+     * Display the Options Page for plugin configuration
+     */
+    function optionsPage()
+    {
+        if ( !current_user_can( 'manage_options' ) )  {
+            wp_die( __( 'You do not have sufficient permissions to access this page.', SWBA_L10N_DOMAIN ) );
+        }
+        echo '<div class="wrap">';
+        echo '<p>In Russia, the Options has Sawabona.</p>';
+        echo '</div>';
     }
 
     /*
@@ -65,11 +101,26 @@ class SponsorRedirect
      */
     function redirect()
     {
-        // get the sponsor username
+        global $wp_query;
 
-        // get back office URL from config
+        if (is_404()) {
+            // get back office URL from config (such as https://office.dev.institutosawabona.com)
+            $backOfficeUrl = get_option('swba_backoffice_url');
+            if ($backOfficeUrl === false) {
+                // ops! Plugin was not configured - will not work...
+                wp_die(__('Configuration Error: BackOffice URL not found. Please setup Sawabona Sponsor Redirect plugin.', SWBA_L10N_DOMAIN));
+            }
 
-        // redirect to back office
+            // get the sponsor username
+            $url = parse_url($_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"]);
+            $username = $url[1];
+            $sponsorUrl = $backOfficeUrl . '/#/sponsor/' . $username;
+
+            // redirect to back office
+            status_header(301); // moved permanently
+            $wp_query->is_404 = false;
+            wp_redirect($sponsorUrl, 301);
+        }
     }
 
     /*
@@ -78,16 +129,16 @@ class SponsorRedirect
     function setupPermalink()
     {
         // store the old permalink options
-        $currentPermalinkStructure = get_option( 'permalink_structure' );
+        $currentPermalinkStructure = get_option('permalink_structure');
 
-        if ( get_option( 'old_permalink_structure' ) === false ) {
-            add_option( 'old_permalink_structure', $currentPermalinkStructure );
+        if (get_option('swba_old_permalink_structure') === false) {
+            add_option('swba_old_permalink_structure', $currentPermalinkStructure);
         } else {
-            update_option( 'old_permalink_structure', $currentPermalinkStructure );
+            update_option('swba_old_permalink_structure', $currentPermalinkStructure);
         }
 
         // update permalink to "Date and Postname" option
-        update_option( 'permalink_structure', '/%year%/%monthnum%/%day%/%postname%/' );
+        update_option('permalink_structure', '/%year%/%monthnum%/%day%/%postname%/');
     }
 
     /**
@@ -95,13 +146,13 @@ class SponsorRedirect
      */
     private function undoPermalink()
     {
-        $permalink = get_option( 'old_permalink_structure' );
-        if ( $permalink === false ) {
+        $permalink = get_option('swba_old_permalink_structure');
+        if ($permalink === false) {
             // old setting not found, set to default
             $permalink = "";
         }
 
-        update_option( 'permalink_structure', $permalink );
+        update_option('permalink_structure', $permalink);
     }
 
     /*
@@ -109,7 +160,7 @@ class SponsorRedirect
      */
     function disableMenus()
     {
-        // Disable File Editor
+        //TODO: Disable File Editor
     }
 
     /*
@@ -117,6 +168,7 @@ class SponsorRedirect
      */
     private function enableMenus()
     {
+        //TODO: $this->enableMenus();
     }
 
     /*
@@ -124,7 +176,7 @@ class SponsorRedirect
      */
     function setupRedirect()
     {
-        // include hook
+        //TODO: include hook
     }
 
     /**
