@@ -87,12 +87,24 @@ class SponsorRedirect
     function registerSettings()
     {
         register_setting( 'swba_options', 'swba_options', array($this, 'validateOptions') );
+        add_settings_section('swba_redirect_section', __('Main Settings', SWBA_L10N_DOMAIN),
+            array($this, 'sectionText'), 'plugin');
+        add_settings_field('swba_backoffice_url', __('BackOffice URL', SWBA_L10N_DOMAIN),
+            array($this, 'backofficeUrl'), 'plugin', 'swba_redirect_section');
+    }
 
-        add_settings_section('plugin_main', __('Main Settings', SWBA_L10N_DOMAIN),
-            array($this, 'sectionText'), 'swba_options');
+    function backofficeUrl() {
+        $options = get_option('swba_options');
+        echo "<input id='swba_backoffice_url' name='swba_options[backoffice_url]' size='40' type='text' value='{$options['backoffice_url']}' />";
+    }
 
-        add_settings_field('swba_redirect_options', __('BackOffice URL', SWBA_L10N_DOMAIN),
-            array($this, 'sectionText'), 'swba_options', 'plugin_main');
+    function validateOptions($input) {
+        $options = get_option('swba_options');
+        $options['backoffice_url'] = trim($input['backoffice_url']);
+
+        //TODO: make sure starts with http(s) and ends without a /
+
+        return $options;
     }
 
     // Add settings link on plugin page
@@ -108,7 +120,16 @@ class SponsorRedirect
      */
     function sectionText()
     {
-        echo '<p>Configure Sponsor Redirection here.</p>';
+        echo '<p>'. __('Configure Sponsor Redirection here.', SWBA_L10N_DOMAIN) . '</p>';
+    }
+
+    /**
+     * Text for the Options Section
+     */
+    function sectionContent()
+    {
+        $options = get_option('swba_options');
+        echo "<input id='swba_backoffice_url' name='swba_options[backoffice_url]' size='40' type='text' value='{$options['backoffice_url']}' />";
     }
 
     /**
@@ -122,12 +143,13 @@ class SponsorRedirect
 
         ?>
         <div class="wrap">
-        <h2>Sawabona SGMMN Redirect Options</h2>
+        <h2><?php echo __('Sawabona SGMMN Redirect Options', SWBA_L10N_DOMAIN); ?></h2>
+        <p><?php echo __('Use this page to configure the SGMMN Sponsor Redirection.', SWBA_L10N_DOMAIN); ?></p>
         <form method="post" action="options.php">
 
         <?php
-            settings_fields( SWBA_OPTIONS_GROUP );
-            do_settings_sections( 'swba_options' );
+            settings_fields( 'swba_options' );
+            do_settings_sections( 'plugin' );
             submit_button(__('Save Options', SWBA_L10N_DOMAIN));
         ?>
         </form>
@@ -144,16 +166,19 @@ class SponsorRedirect
 
         if (is_404()) {
             // get back office URL from config (such as https://office.dev.institutosawabona.com)
-            $backOfficeUrl = get_option('swba_backoffice_url');
-            if ($backOfficeUrl === false) {
+            $options = get_option('swba_options');
+            if ($options === false) {
                 // ops! Plugin was not configured - will not work...
                 wp_die(__('Configuration Error: BackOffice URL not found. Please setup Sawabona Sponsor Redirect plugin.', SWBA_L10N_DOMAIN));
             }
 
             // get the sponsor username
-            $url = parse_url($_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"]);
-            $username = $url[1];
-            $sponsorUrl = $backOfficeUrl . '/#/sponsor/' . $username;
+            $url = $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
+            $path = parse_url($url, PHP_URL_PATH);
+            $pathFragments = explode('/', rtrim($path, '/'));
+
+            $username = end($pathFragments);
+            $sponsorUrl = $options['backoffice_url'] . '/#/sponsor/' . $username;
 
             // redirect to back office
             status_header(301); // moved permanently
