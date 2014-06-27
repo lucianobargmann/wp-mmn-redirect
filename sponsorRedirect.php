@@ -121,6 +121,7 @@ class SponsorRedirect
     function sectionText()
     {
         echo '<p>'. __('Configure Sponsor Redirection here.', SWBA_L10N_DOMAIN) . '</p>';
+        echo "<p>" . __('Example: <strong>https://office.my-mlm-company.com</strong>', SWBA_L10N_DOMAIN) . '</p>';
     }
 
     /**
